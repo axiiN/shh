@@ -1,0 +1,136 @@
+printer dhcp ()
+soho dhcp (gui)
+soho dhcp reservation
+manually adding client --> name ip mac -->add, save
+printer dhcp drop ip --> uj dhcp ip
+server dhcp -->name mac ip
+server dhcp drop ip --> uj dhcp ip
+---------------------------------------
+soho wifi (wireless menu)
+SSID name : "név" mindegyiknél
+wireless security --> WPA2 personal + password + AES
+laptop --> config --> wireless --> WPA2-PSK -->SSID jelszó
+---------------------------------------
+ISP dhcp
+desktop --> command prompt --> ssh -l Jozsi(ami megvan adva)  def-gateway(70.0.0.1(ami megvan adva))
+conf t
+ip dhcp ex-address (mettől meddig pl.: 193.41.10.1 193.41.10.100 (100 ip kizárva)) 
+ip dhcp pool [Users]--(ami megvan adva)
+net (194.41.10.)0!  (ami megvan adva,a 0 kell a végere)
+def (194.41.10.)1!  (ami megvan adva, az 1 kell a végére)
+dns 70.0.0.1 (ami megvan adva)
+domain-name isp.hu(ami megvan adva)
+exit
+do wr
+soho -->status--> release ip, renew ip
+pc dhcp drop-->dhcp new
+pc --> command prompt-->ping isp.hu
+pc --> email client --> email: jozsi(ami megvan adva)@isp.hu
+----------------------------------------
+2 switch --> keresztkábel (azonos eszközök)
+switch-router --> sima
+
+switch --> 
+ena
+conf t
+vlan 10
+name (Ami megvan adva)
+
+vlan 20 ...stb (Ameddig megvan adva)
+
+vtp mode server
+vtp domain name ceg.hu (ami megvan adva)
+vtp pass VTPtitok (ami megvan adva)
+
+int g0/2 (interfacetől függ)
+sw m tr
+--------------int r f0/1-10 (ami megvan adva)
+sw m a 
+sw a v 10 (amelyik vlan hozzá tartozik)
+
+int vlan20 
+ip add 192.168.20.3 255.255.255.0
+no shut
+exit
+ip def-gateway 192.168.20.1
+ena sec titok
+line vty 0 4
+pass alma (ami megvan adva)
+login
+exit
+int g0/1
+sw m a 
+sw a v 40
+shut
+------------------ >>ezt a másikra is
+(int vlan 1, ip add 192.168.X.X)
+
+masik switch
+int r g0/1-2
+sw m tr
+exit
+vtp mode client
+vtp domain ceg.hu(ami megvan adva)
+vtp pass VTPtitok (ami megvan adva)
+
+
+
+router (Ceg(ami megvan adva))
+h Ceg
+int g0/0 (attól függ melyikre van rakva)
+no shut
+
+int g0/0.10
+enc d1q 10(Azt a számot kell írni ami a VLan száma)
+ip add 192.168.10(ami megvan adva).1 255.255.255.0(ami megvan adva)
+
+int g0/0.20 ... stb stb (ameddig tart)
+
+exit (config-ig)
+
+ip dhcp ex 192.168.10.1
+ip dhcp ex 192.168.20.1 192.168.20.50
+ip dhcp ex 192.168.30.1
+------ip dhcp pool Iroda (ami megvan adva)
+net 192.168.10.0! 255.255.255.0
+def 192.168.10.1!
+dns 70.0.0.1
+
+stb stb.. (ameddig kell)--------
+
+
+int g0/1 (felhő felé)
+ip route 0.0.0.0 0.0.0.0 193.41.10.1(ami megvan adva)
+
+acl 1 permit 192.168.10.0(Amelyikre a VLanra van ip) 0.0.0.255
+acl 1 permit 192.168.20.0(Amelyikre a VLanra van ip) 0.0.0.255
+acl 1 permit 192.168.30.0(Amelyikre a VLanra van ip) 0.0.0.255
+
+ip nat ins source list 1 interf g0/1 over
+int g0/1
+ip nat out
+
+int g0/0.10 
+ip nat ins
+
+int g0/0.20
+ip nat ins
+
+int g0/0.30
+ip nat ins
+
+exit
+
+
+user Jozsi pri 15 sec CsakALinux
+ip domain-name ceg.hu
+crypto key generate rsa general-keys modulus 1024
+line vty 0 4
+login local 
+trans input ssh
+exit
+do wr
+
+soho alatti pc-->command prompt
+ssh -l (L betű) Jozsi(a név amit megadtunk) 193.41.10.2 (amit megadtunk)
+
